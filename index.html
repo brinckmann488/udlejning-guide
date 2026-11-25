@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Udlejning med Claude</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: en rolig vejledning – sticky indholdsfortegnelse til venstre på desktop, én kolonne på mobil. Et "dokumentarkiv"-præg: kartotekskort, paragraftegn og stier i mono. */
+:root {
+  --bg: #F3F5F4;
+  --surface: #FFFFFF;
+  --ink: #17211E;
+  --muted: #56635E;
+  --line: #D6DDDA;
+  --accent: #1D6B57;
+  --accent-soft: #E2EFEA;
+  --warn: #8A4B0F;
+  --warn-soft: #F8EDDF;
+  --code-bg: #E9EEEC;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121917; --surface: #19221F; --ink: #E4EBE8; --muted: #9AA9A3; --line: #2C3834;
+  --accent: #6CC3A8; --accent-soft: #1C342D; --warn: #E7AE6B; --warn-soft: #33261A; --code-bg: #212C29;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121917; --surface: #19221F; --ink: #E4EBE8; --muted: #9AA9A3; --line: #2C3834;
+  --accent: #6CC3A8; --accent-soft: #1C342D; --warn: #E7AE6B; --warn-soft: #33261A; --code-bg: #212C29;
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 4rem; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); font-weight: 700; }
+h3 { font-size: 1.15rem; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--font-mono); font-size: .88em; }
+code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Hero */
+.hero { padding-block: 3.5rem 2.5rem; border-bottom: 1px solid var(--line); margin-bottom: 2.5rem; }
+.eyebrow { font-family: var(--font-mono); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.hero h1 { font-size: clamp(2.3rem, 6vw, 4rem); font-weight: 700; margin-top: .6rem; max-width: 16ch; }
+.hero .lede { font-size: 1.15rem; color: var(--muted); max-width: 60ch; margin-top: 1.1rem; }
+.principle { margin-top: 2rem; display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: start; background: var(--accent-soft); border-radius: 10px; padding: 1.25rem 1.4rem; max-width: 760px; }
+.principle .mark { font-family: var(--font-display); font-size: 2.4rem; line-height: 1; color: var(--accent); }
+.principle strong { display: block; font-size: 1.1rem; margin-bottom: .25rem; }
+
+/* Grid med TOC */
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 3rem; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 1.5rem); align-self: start; font-size: .92rem; }
+nav.toc ol { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .35rem; }
+nav.toc a { color: var(--muted); text-decoration: none; }
+nav.toc a:hover { color: var(--accent); }
+.toc-label { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+main { min-width: 0; display: grid; gap: 4rem; }
+section { display: grid; gap: 1.2rem; scroll-margin-top: 1.5rem; }
+section > p, .prose { max-width: 66ch; }
+.sec-intro { color: var(--muted); max-width: 66ch; }
+
+/* Rum-kort */
+.rooms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.room { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; display: grid; gap: .45rem; align-content: start; }
+.room .what { font-family: var(--font-mono); font-size: .8rem; color: var(--accent); }
+.room p { font-size: .95rem; color: var(--muted); }
+.room .who { font-size: .82rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: .45rem; margin-top: .2rem; }
+.room.public { border-color: var(--accent); }
+
+/* Ordbog */
+dl.glossary { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 0; margin: 0; border-top: 1px solid var(--line); }
+dl.glossary dt, dl.glossary dd { padding: .9rem 0; border-bottom: 1px solid var(--line); margin: 0; }
+dl.glossary dt { font-family: var(--font-display); font-weight: 700; padding-right: 1rem; }
+dl.glossary dd { color: var(--ink); }
+dl.glossary dd .aside { display: block; color: var(--muted); font-size: .93rem; margin-top: .35rem; }
+
+/* Grunde */
+.reasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 2rem; list-style: none; padding: 0; margin: 0; counter-reset: r; }
+.reasons li { counter-increment: r; display: grid; grid-template-columns: 2rem 1fr; gap: .2rem .6rem; }
+.reasons li::before { content: counter(r); font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; color: var(--accent); grid-row: span 2; line-height: 1.2; }
+.reasons strong { display: block; }
+.reasons span { color: var(--muted); font-size: .95rem; }
+.never { background: var(--warn-soft); border-radius: 10px; padding: 1.1rem 1.3rem; display: grid; gap: .4rem; max-width: 760px; }
+.never h3 { color: var(--warn); }
+.never ul { margin: 0; padding-left: 1.2rem; }
+
+/* Trappe */
+.ladder { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.step { padding: 1.1rem 1.2rem; display: grid; gap: .4rem; align-content: start; border-right: 1px solid var(--line); }
+.step:last-child { border-right: 0; }
+.step .when { font-family: var(--font-mono); font-size: .78rem; color: var(--accent); }
+.step p { font-size: .95rem; color: var(--muted); }
+.step.now { background: var(--accent-soft); }
+
+/* Faser */
+.phases { display: grid; gap: 1rem; }
+details.phase { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details.phase[open] { border-color: var(--accent); }
+details.phase summary { cursor: pointer; list-style: none; padding: 1rem 1.2rem; display: grid; grid-template-columns: auto 1fr auto; gap: .9rem; align-items: center; }
+details.phase summary::-webkit-details-marker { display: none; }
+.ph-no { font-family: var(--font-mono); font-size: .8rem; background: var(--accent); color: var(--surface); border-radius: 999px; padding: .2rem .6rem; white-space: nowrap; }
+.ph-title { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+.ph-meta { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+.ph-body { padding: 0 1.2rem 1.2rem; display: grid; gap: .9rem; }
+.ph-body > p { color: var(--muted); max-width: 66ch; }
+ul.checks { list-style: none; padding: 0; margin: 0; display: grid; gap: .6rem; }
+ul.checks li { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr); gap: .6rem; align-items: start; }
+ul.checks input { width: 1.15rem; height: 1.15rem; margin-top: .25rem; accent-color: var(--accent); }
+ul.checks label { cursor: pointer; }
+ul.checks .sub { display: block; color: var(--muted); font-size: .92rem; margin-top: .2rem; }
+.progress { font-family: var(--font-mono); font-size: .8rem; color: var(--muted); }
+.note { border-left: 3px solid var(--accent); padding: .2rem 0 .2rem .9rem; color: var(--muted); font-size: .95rem; max-width: 66ch; }
+pre.tree { background: var(--code-bg); border-radius: 8px; padding: 1rem 1.1rem; overflow-x: auto; font-family: var(--font-mono); font-size: .85rem; line-height: 1.55; margin: 0; }
+.rule-of-thumb { font-family: var(--font-display); font-size: 1.15rem; font-weight: 500; }
+
+/* Prompts */
+.prompts { display: grid; gap: .7rem; }
+.prompt { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; }
+.prompt q { quotes: none; font-style: italic; }
+.prompt .ctx { display: block; font-size: .82rem; color: var(--muted); font-style: normal; margin-top: .2rem; }
+button.copy { font: 500 .8rem var(--font-mono); border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 6px; padding: .35rem .65rem; cursor: pointer; white-space: nowrap; }
+button.copy:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Regler */
+.rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.rule { border-top: 3px solid var(--accent); padding-top: .7rem; display: grid; gap: .3rem; }
+.rule p { color: var(--muted); font-size: .95rem; }
+
+/* Frist-tabel */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: .95rem; }
+th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+tr:last-child td { border-bottom: 0; }
+td.par { font-family: var(--font-mono); white-space: nowrap; color: var(--accent); }
+td.deadline { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tag { display: inline-block; font: 500 .72rem var(--font-mono); padding: .1rem .45rem; border-radius: 999px; background: var(--warn-soft); color: var(--warn); margin-left: .3rem; }
+
+.disclaimer { background: var(--warn-soft); border-radius: 10px; padding: 1.1rem 1.3rem; display: grid; gap: .4rem; max-width: 760px; }
+.disclaimer h3 { color: var(--warn); }
+footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .88rem; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { position: static; margin-bottom: 2.5rem; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; }
+  .rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  body { font-size: 16px; }
+  .rooms, .reasons, .rules { grid-template-columns: minmax(0, 1fr); }
+  .ladder { grid-template-columns: minmax(0, 1fr); }
+  .step { border-right: 0; border-bottom: 1px solid var(--line); }
+  .step:last-child { border-bottom: 0; }
+  dl.glossary { grid-template-columns: minmax(0, 1fr); }
+  dl.glossary dt { border-bottom: 0; padding-bottom: 0; }
+  details.phase summary { grid-template-columns: auto 1fr; }
+  .ph-meta { grid-column: 2; }
+  .prompt { grid-template-columns: minmax(0, 1fr); }
+  .prompt button { justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">Startpakke · udlejningsadministration</div>
+    <h1>Udlejning med Claude</h1>
+    <p class="lede">En vejledning til at sætte din egen administration op: korrespondance med lejere, lejekontrakter, betalinger og lejelovens frister, med Claude som assistent. Du behøver ikke at have programmeret før. Læs de første afsnit i ro og mag; resten er en opskrift, du følger ved computeren.</p>
+    <div class="principle">
+      <div class="mark" aria-hidden="true">§</div>
+      <div>
+        <strong>Opskrifterne ligger i GitHub. Ingredienserne gør ikke.</strong>
+        <p>GitHub-repoet fortæller Claude <em>hvordan</em> man håndterer en fraflytning. Lejerens navn, kontrakt og billeder ligger i dit arkiv i Google Drive. Så kan dine arbejdsgange aldrig komme til at lække persondata, og du kan trygt vise dem til en rådgiver.</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Indhold">
+      <div class="toc-label">Indhold</div>
+      <ol>
+        <li><a href="#rum">Det store billede</a></li>
+        <li><a href="#ordbog">Ordbog</a></li>
+        <li><a href="#github">Hvorfor GitHub</a></li>
+        <li><a href="#database">Hvorfor ikke en database endnu</a></li>
+        <li><a href="#opskrift">Opskriften, trin for trin</a></li>
+        <li><a href="#hverdag">Sådan bruger du det</a></li>
+        <li><a href="#regler">Spillereglerne</a></li>
+        <li><a href="#frister">Lejelovens vigtigste frister</a></li>
+        <li><a href="#pakken">Hvad er i pakken</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <!-- 1 -->
+      <section id="rum">
+        <h2>Det store billede: seks rum</h2>
+        <p class="sec-intro">Tænk på administrationen som et lille kontor med seks rum. Hvert rum har én opgave, og de er bevidst holdt adskilt.</p>
+        <div class="rooms">
+          <div class="room"><h3>Arkivskabet</h3><div class="what">Google Drive</div><p>Lejekontrakter, ind- og fraflytningsrapporter, billeder, breve og et lejemålskort pr. lejemål.</p><div class="who">Kun dig, og Claude når du beder om det</div></div>
+          <div class="room"><h3>Postkassen</h3><div class="what">Gmail til udlejning</div><p>Al korrespondance med lejere og interesserede, adskilt fra din private mail.</p><div class="who">Kun dig, og Claude via Gmail-connectoren</div></div>
+          <div class="room"><h3>Kassebogen</h3><div class="what">Regnskabsprogram</div><p>Huslejeopkrævning, bankafstemning og bogføring. Her ses det, hvem der har betalt.</p><div class="who">Dig og din revisor</div></div>
+          <div class="room"><h3>Arbejdsbeskrivelsen</h3><div class="what">Privat GitHub-repo</div><p>Instruktioner til Claude, tjeklister, skabeloner og lovtekst. Ingen lejerdata.</p><div class="who">Kun dig</div></div>
+          <div class="room"><h3>Assistenten</h3><div class="what">Claude-appen</div><p>Gemmer intet selv. Læser de andre rum, laver udkast og holder øje med frister.</p><div class="who">Arbejder for dig</div></div>
+          <div class="room public"><h3>Butiksvinduet</h3><div class="what">Hjemmeside (senere)</div><p>Ledige lejemål, billeder og en interesseformular til mulige lejere.</p><div class="who">Alle</div></div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="ordbog">
+        <h2>Ordbog</h2>
+        <p class="sec-intro">De ord, du kommer til at støde på, og hvad de betyder for dig.</p>
+        <dl class="glossary">
+          <dt>Claude, claude.ai og Claude-appen</dt>
+          <dd>Claude er AI-assistenten. Du skal have et betalt abonnement (<strong>Pro</strong>, ca. 20 USD/md., eller <strong>Max</strong> hvis du bruger den meget), for gratisversionen kan ikke forbindes til Gmail og Drive. claude.ai er Claude i browseren. Claude-appen er den samme Claude installeret på computeren.</dd>
+
+          <dt>Claude Code</dt>
+          <dd>Fanen <strong>Code</strong> i Claude-appen. Her kan Claude åbne en mappe på din computer, læse og skrive filerne i den og følge instruktionerne, der ligger der. <span class="aside">Du behøver ikke kunne kode. Navnet er historisk. Tænk på det som "Claude, der må arbejde i en mappe".</span></dd>
+
+          <dt>Connector og MCP</dt>
+          <dd>En connector er et stik, der giver Claude adgang til en anden tjeneste, fx Gmail, Google Drive eller Google Kalender. Du slår den til under <em>Settings → Connectors</em> og logger ind hos Google. <span class="aside">MCP er det tekniske navn på standarden bag stikket. Der findes connectors til mange tjenester, og man kan bygge sine egne. Start med de officielle til Google: de virker med et klik.</span></dd>
+
+          <dt><code>CLAUDE.md</code></dt>
+          <dd>En almindelig tekstfil. Når Claude åbner en mappe, læser den altid denne fil først. Det er din arbejdsbeskrivelse til assistenten: hvem du er, hvor dokumenterne ligger, hvordan du skriver til lejerne, og hvilke regler der altid gælder.</dd>
+
+          <dt>Skill</dt>
+          <dd>En opskrift på én bestemt opgave, fx "sådan håndterer vi en fraflytning". Også bare en tekstfil (<code>SKILL.md</code>). Claude læser den kun, når opgaven dukker op. <span class="aside">Skills gør Claude pålidelig: i stedet for at finde reglerne frem hver gang, følger den den samme tjekliste med de samme frister, som du har kontrolleret én gang.</span></dd>
+
+          <dt>Markdown (.md)</dt>
+          <dd>Almindelig tekst med lidt simpel opmærkning: <code>#</code> foran en overskrift, <code>-</code> foran et punkt. Både du og Claude kan læse det, og det kan åbnes i Notesblok.</dd>
+
+          <dt>Git</dt>
+          <dd>Et program, der husker alle versioner af en mappe. Hver gang du gemmer en version (et <strong>commit</strong>), tages et øjebliksbillede med en kort note om, hvad der er ændret. <span class="aside">Som versionshistorikken i Google Docs, bare for en hel mappe på én gang.</span></dd>
+
+          <dt>GitHub og repo</dt>
+          <dd>GitHub er en hjemmeside, hvor du gemmer en git-mappe i skyen. Mappen kaldes et <strong>repo</strong>. At sende dine nye versioner derop kaldes at <strong>pushe</strong>. Et <strong>privat repo</strong> kan kun ses af dig og dem, du inviterer. Det er gratis.</dd>
+
+          <dt>Database</dt>
+          <dd>Et system til at gemme mange ens rækker og slå dem op hurtigt, fx alle lejemål med husleje og depositum. Et regneark er faktisk en lille database. Du skal ikke starte med en (se nedenfor).</dd>
+        </dl>
+      </section>
+
+      <!-- 3 -->
+      <section id="github">
+        <h2>Hvorfor GitHub, og ikke bare en mappe i Drive?</h2>
+        <p class="sec-intro">Det er et rimeligt spørgsmål. Her er seks grunde.</p>
+        <ol class="reasons">
+          <li><strong>"Fortryd" for alt</strong><span>Når Claude retter i din tjekliste, kan du se præcis hvilke linjer, der er ændret, og rulle det tilbage. Når tjeklisten handler om juridiske frister, betyder det noget.</span></li>
+          <li><strong>Claude Code er bygget til det</strong><span>Claude kan selv gemme versioner og pushe. Du skal ikke lære kommandoer: skriv bare "gem i git".</span></li>
+          <li><strong>Samme opskrifter overalt</strong><span>Repoet hentes ned på en ny computer på et minut, og Claude kan arbejde i det fra mobilen eller i skyen, selv når din computer er slukket.</span></li>
+          <li><strong>Sådan deles arbejdsgange</strong><span>Hyrer du senere en udvikler til hjemmeside eller dashboard, giver du adgang til repoet, og vedkommende kender dine regler fra dag ét.</span></li>
+          <li><strong>Orden af sig selv</strong><span>Git er til opskrifter, og filen <code>.gitignore</code> holder automatisk PDF'er, Word-filer, billeder og regneark ude. Så ligger hver ting det rigtige sted, uden at du skal tænke over det.</span></li>
+          <li><strong>Det er fundamentet for alt det næste</strong><span>Udlejning er bare det første område. Det næste, fx hjemmesiden, selskabet eller din privatøkonomi, er et nyt repo på fem minutter, og Claude kender reglerne fra første samtale. Derfor er GitHub trin 1.</span></li>
+        </ol>
+        <p class="note"><strong>Hver ting har sin plads.</strong> Repoet får opskrifterne, arkivskabet får kontrakter, rapporter og lejeroplysninger. Det er hele GDPR-håndteringen i praksis, og <code>.gitignore</code> klarer det meste af sig selv. Claude kan sagtens arbejde med lejerdata, når de ligger i arkivskabet.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="database">
+        <h2>Hvorfor ikke en database endnu?</h2>
+        <p class="sec-intro">Du får brug for noget database-agtigt til et dashboard. Men du ved endnu ikke, hvilke kolonner du har brug for, og en database skal vedligeholdes. Gå op ad trappen, når du har brug for det næste trin.</p>
+        <div class="ladder">
+          <div class="step now"><div class="when">Nu</div><h3>Ét lejemålskort pr. lejemål</h3><p>En markdown-fil i arkivskabet. Claude kan læse alle kortene og svare på "hvem har depositum over 30.000?".</p></div>
+          <div class="step"><div class="when">Efter 3–6 måneder</div><h3>Et regneark</h3><p>Google Sheets med én række pr. lejemål og de kolonner, du faktisk har savnet. Kan bruges som kilde til et simpelt dashboard.</p></div>
+          <div class="step"><div class="when">Hvis det bliver for småt</div><h3>En rigtig database</h3><p>Fx Supabase eller Airtable. Typisk når flere skal arbejde i det samtidig, eller et dashboard skal opdatere sig selv.</p></div>
+        </div>
+        <p class="note"><strong>Betalinger</strong> hører slet ikke til i din egen database. Dem holder regnskabsprogrammet styr på, fordi det alligevel henter dine bankposteringer. Selskabet skal have et digitalt bogføringssystem efter bogføringsloven, så den udgift har du under alle omstændigheder.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="opskrift">
+        <h2>Opskriften, trin for trin</h2>
+        <p class="sec-intro">Brug cirka en uge pr. fase. GitHub kommer først, fordi alt andet bygger på det. Afkrydsningerne huskes i din browser, så du kan se, hvor du er nået til. <span class="progress" id="progress"></span></p>
+
+        <div class="phases">
+          <details class="phase" open>
+            <summary><span class="ph-no">Fase 1</span><span class="ph-title">Claude og GitHub: fundamentet</span><span class="ph-meta">ca. 1 time</span></summary>
+            <div class="ph-body">
+              <ul class="checks">
+                <li><input type="checkbox" id="c1-1"><label for="c1-1"><strong>Claude Pro</strong> på claude.ai.<span class="sub">Under Settings → Privacy: slå "Help improve Claude" fra, så dine samtaler ikke bruges til træning.</span></label></li>
+                <li><input type="checkbox" id="c1-2"><label for="c1-2">Installér <strong>Claude-appen</strong> fra claude.ai/download og log ind.</label></li>
+                <li><input type="checkbox" id="c1-3"><label for="c1-3"><strong>GitHub-konto</strong> på github.com.<span class="sub">Brugernavnet står i adressen på alle dine repos. Slå to-trins-login til under Settings → Password and authentication: kontoen kommer til at indeholde dine arbejdsgange.</span></label></li>
+                <li><input type="checkbox" id="c1-4"><label for="c1-4"><strong>Send dit GitHub-brugernavn til Kristian.</strong><span class="sub">Du får en invitation fra GitHub på mail til skabelonen <code>udlejning-skabelon</code>. Klik Accept invitation.</span></label></li>
+                <li><input type="checkbox" id="c1-5"><label for="c1-5">Klik den grønne knap <strong>Use this template → Create a new repository</strong>. Vælg dig selv som ejer, kald det fx <code>udlejning</code>, vælg <strong>Private</strong>, og klik Create.<span class="sub">Nu har du din egen kopi med guide, <code>CLAUDE.md</code>, skills, skabeloner og et eksempelarkiv. Skabelonen er kun udgangspunktet: det er dit eget repo, du arbejder i.</span></label></li>
+                <li><input type="checkbox" id="c1-6"><label for="c1-6">Åbn <strong>Claude-appen → Code</strong>, vælg at åbne et repo fra GitHub, og vælg <code>udlejning</code>.<span class="sub">Første gang logger du ind på GitHub fra appen. Herefter ligger der en kopi på din computer, som Claude arbejder i.</span></label></li>
+                <li><input type="checkbox" id="c1-7"><label for="c1-7">Skriv <strong>"hjælp mig i gang"</strong>.<span class="sub">Skillen <code>kom-i-gang</code> tager over. Den viser først skills på et opdigtet eksempel (en fraflytning, en manglende husleje og en bunke mails), så du ser det virke. Derefter udfylder I <code>CLAUDE.md</code>, henter lejeloven og kobler Gmail og Drive på. Den husker, hvor I er nået til, så du kan holde pause og fortsætte en anden dag.</span></label></li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="phase">
+            <summary><span class="ph-no">Fase 2</span><span class="ph-title">Postkassen og arkivskabet: Gmail og Drive</span><span class="ph-meta">ca. 30 min.</span></summary>
+            <div class="ph-body">
+              <ul class="checks">
+                <li><input type="checkbox" id="c2-1"><label for="c2-1">Opret en <strong>udlejnings-Gmail</strong>.<span class="sub">Fx udlejning.ditnavn@gmail.com, eller en adresse på dit eget domæne via Google Workspace. Så ser Claude kun udlejningsmail.</span></label></li>
+                <li><input type="checkbox" id="c2-2"><label for="c2-2">Installér <strong>Google Drive for desktop</strong> med udlejningskontoen og skriv stien ind i <code>CLAUDE.md</code>.<span class="sub">Så ligger arkivskabet som en almindelig mappe, og Claude Code kan læse den direkte.</span></label></li>
+                <li><input type="checkbox" id="c2-3"><label for="c2-3">claude.ai → Settings → Connectors → <strong>Gmail</strong> → Connect. Gør det samme med <strong>Google Drive</strong> og <strong>Google Kalender</strong>.</label></li>
+              </ul>
+              <p class="note">Den hyppigste fejl: connectoren skal være slået til i værktøjsmenuen ved tekstfeltet i hver samtale. Ellers svarer Claude, at den ikke har adgang. Driller login, så prøv i et inkognitovindue, så du ikke godkender den forkerte Google-konto.</p>
+            </div>
+          </details>
+
+          <details class="phase">
+            <summary><span class="ph-no">Fase 3</span><span class="ph-title">Fyld arkivskabet</span><span class="ph-meta">1–2 timer</span></summary>
+            <div class="ph-body">
+              <p>Mappestrukturen i Google Drive. Bed gerne Claude om at oprette den og om hjælp til at udfylde et lejemålskort pr. lejemål ud fra kontrakterne. Det er det kedeligste og det mest værdifulde trin.</p>
+<pre class="tree">Udlejning/
+  Ejendom - Vestergade 12/
+    Lejemål - st. tv/
+      lejemaal.md          ← lejemålskortet
+      Kontrakt/
+      Indflytning/
+      Fraflytning/
+      Korrespondance/
+      Depositum/
+    Lejemål - 1. th/
+  Ledige lejemål/          ← billeder og tekster til annoncer</pre>
+              <ul class="checks">
+                <li><input type="checkbox" id="c3-1"><label for="c3-1">Mappestruktur oprettet</label></li>
+                <li><input type="checkbox" id="c3-2"><label for="c3-2">Et <code>lejemaal.md</code> udfyldt for hvert lejemål</label></li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="phase">
+            <summary><span class="ph-no">Fase 4</span><span class="ph-title">Mere end udlejning</span><span class="ph-meta">løbende</span></summary>
+            <div class="ph-body">
+              <p>Her betaler det sig, at GitHub kom først. Der er tre måder at bygge videre på.</p>
+              <ul class="checks">
+                <li><input type="checkbox" id="c4-1"><label for="c4-1"><strong>En ny skill i samme repo</strong> til en ny udlejningsopgave, fx lejeregulering eller forbrugsregnskab.<span class="sub">Bedste tidspunkt: lige efter du har løst opgaven første gang. Bed Claude gøre løsningen til en skill og gemme i git.</span></label></li>
+                <li><input type="checkbox" id="c4-2"><label for="c4-2"><strong>Et nyt repo pr. område</strong>, fx <code>hjemmeside</code>, <code>selskab</code> eller <code>privatoekonomi</code>.<span class="sub">Hvert repo har sin egen CLAUDE.md, så Claude får den rigtige sammenhæng, og områderne ikke blander sig.</span></label></li>
+                <li><input type="checkbox" id="c4-3"><label for="c4-3"><strong>Personlige skills, der gælder overalt</strong>, fx "sådan skriver jeg mails".<span class="sub">De kan ligge i et repo <code>mine-skills</code>, som Claude sætter op, så de virker i alle mapper.</span></label></li>
+              </ul>
+              <p class="rule-of-thumb">Samme data og samme regler: samme repo. Nye data eller nye regler: nyt repo.</p>
+              <p class="note">GitHub kan også kobles til claude.ai under Settings → Connectors, så en almindelig chat (også på mobilen) kan læse filerne i dine repos.</p>
+            </div>
+          </details>
+
+          <details class="phase">
+            <summary><span class="ph-no">Fase 5</span><span class="ph-title">Regnskab og betalinger</span><span class="ph-meta">når det passer</span></summary>
+            <div class="ph-body">
+              <ul class="checks">
+                <li><input type="checkbox" id="c5-1"><label for="c5-1">Vælg et regnskabsprogram og forbind det til banken.</label></li>
+                <li><input type="checkbox" id="c5-2"><label for="c5-2">Giv hver lejer en fast betalingsreference.<span class="sub">Betalingsservice, FI-kort eller MobilePay Abonnementer, så indbetalinger kan matches automatisk.</span></label></li>
+                <li><input type="checkbox" id="c5-3"><label for="c5-3">Prøv skillen <code>betaling-og-paakrav</code> ved næste månedsskifte.</label></li>
+              </ul>
+              <p class="note">Brug ikke regnskabsprogrammets automatiske rykkere til husleje. De følger renteloven. Det er påkravet efter lejeloven, der giver ret til at hæve lejeaftalen, og det skal sendes som <strong>brev</strong>, aldrig som mail (§ 13, stk. 2).</p>
+            </div>
+          </details>
+
+          <details class="phase">
+            <summary><span class="ph-no">Fase 6</span><span class="ph-title">Butiksvindue og dashboard</span><span class="ph-meta">senere</span></summary>
+            <div class="ph-body">
+              <ul class="checks">
+                <li><input type="checkbox" id="c6-1"><label for="c6-1"><strong>Hjemmesiden</strong> bygges i sit eget repo.<span class="sub">Claude Code kan bygge en enkel, hurtig side og lægge den gratis på Cloudflare Pages eller Netlify. Ledige lejemål bliver små markdown-filer, så Claude kan lave en annonce ud fra et lejemålskort og nogle billeder.</span></label></li>
+                <li><input type="checkbox" id="c6-2"><label for="c6-2"><strong>Dashboardet</strong> kommer, når du ved, hvad du savner.<span class="sub">Start med at bede Claude om et overblik i samtalen. Når du har spurgt om det samme ti gange, er det tid til at bygge det som en side.</span></label></li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="hverdag">
+        <h2>Sådan bruger du det i hverdagen</h2>
+        <p class="sec-intro">Åbn Claude-appen → Code → dit <code>udlejning</code>-repo, og skriv fx:</p>
+        <div class="prompts">
+          <div class="prompt"><q>Gennemgå udlejningsmailen fra den sidste uge. Hvilke lejere venter på svar? Lav udkast.</q><button class="copy" type="button">Kopiér</button></div>
+          <div class="prompt"><q>Lejeren i Vestergade 12, st. tv har opsagt. Kør fraflytnings-skillen og lav en plan med datoer.</q><button class="copy" type="button">Kopiér</button></div>
+          <div class="prompt"><q>Hvem mangler at betale husleje for denne måned?<span class="ctx">Når regnskabsprogrammet er koblet på</span></q><button class="copy" type="button">Kopiér</button></div>
+          <div class="prompt"><q>Jeg har et ledigt lejemål. Kør ny-lejer-skillen.</q><button class="copy" type="button">Kopiér</button></div>
+          <div class="prompt"><q>Hvad siger lejeloven om, hvornår jeg må varsle en lejeforhøjelse? Henvis til paragraffen.</q><button class="copy" type="button">Kopiér</button></div>
+          <div class="prompt"><q>Det er forkert i skillen. Ret det, og gem i git.<span class="ctx">Sådan bliver opskrifterne bedre over tid</span></q><button class="copy" type="button">Kopiér</button></div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="regler">
+        <h2>Spillereglerne</h2>
+        <p class="sec-intro">De står også i <code>CLAUDE.md</code>, så Claude følger dem af sig selv.</p>
+        <div class="rules">
+          <div class="rule"><h3>Find vejen, ikke forhindringen</h3><p>Lejelov og GDPR er viden, Claude bruger til at gøre tingene rigtigt. Den svarer med hvordan, ikke "det kan du ikke".</p></div>
+          <div class="rule"><h3>Claude laver udkast, du trykker send</h3><p>Claude skriver mails, påkrav og varsler færdige. Du læser dem igennem og sender dem.</p></div>
+          <div class="rule"><h3>Svar med paragraf</h3><p>Juridiske svar kommer med paragraffen, så du kan handle på dem med det samme og se, hvor de kommer fra.</p></div>
+          <div class="rule"><h3>Fristerne er bygget ind</h3><p>Skills regner datoerne ud og lægger dem i kalenderen, så lejelovens frister passer sig selv.</p></div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="frister">
+        <h2>Lejelovens vigtigste frister</h2>
+        <p class="sec-intro">Slået op i lejeloven (LOV nr. 341 af 22/03/2022 med senere ændringer) på retsinformation.dk i november 2026. Gælder udlejere med mere end én beboelseslejlighed. Den fulde note med kilder ligger i repoet som <code>lovgivning/lejeloven-noegleregler.md</code>.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Situation</th><th>Frist eller regel</th><th>§</th></tr></thead>
+            <tbody>
+              <tr><td>Indflytningsrapport, når lejer ikke er til stede ved synet</td><td class="deadline">senest 2 uger efter synet</td><td class="par">§ 90</td></tr>
+              <tr><td>Lejer melder mangler ved indflytning</td><td class="deadline">senest 2 uger efter start</td><td class="par">§ 91</td></tr>
+              <tr><td>Depositum og forudbetalt leje</td><td class="deadline">højst 3 mdr. hver</td><td class="par">§ 59</td></tr>
+              <tr><td>Påkrav ved manglende husleje, tidligst</td><td class="deadline">efter 3. hverdag</td><td class="par">§ 182, stk. 2</td></tr>
+              <tr><td>Lejers frist til at betale efter påkrav</td><td class="deadline">14 dage fra modtagelse</td><td class="par">§ 182, stk. 2</td></tr>
+              <tr><td>Påkravsgebyr 2026</td><td class="deadline">335 kr.</td><td class="par">§ 182, § 204</td></tr>
+              <tr><td>Påkrav og udlejers opsigelse må ikke sendes digitalt</td><td class="deadline">altid brev</td><td class="par">§ 13, stk. 2</td></tr>
+              <tr><td>Lejers opsigelse af en lejlighed</td><td class="deadline">3 måneder</td><td class="par">§ 175</td></tr>
+              <tr><td>Indkaldelse til fraflytningssyn</td><td class="deadline">mindst 1 uges varsel</td><td class="par">§ 187</td></tr>
+              <tr><td>Fraflytningssyn efter kendskab til fraflytning <span class="tag">praksis</span></td><td class="deadline">senest 2 uger</td><td class="par">§ 187</td></tr>
+              <tr><td>Fraflytningsrapport, hvis ikke udleveret ved synet</td><td class="deadline">senest 2 uger efter synet</td><td class="par">§ 187</td></tr>
+              <tr><td>Istandsættelseskrav gjort gældende</td><td class="deadline">senest 2 uger efter synet</td><td class="par">§ 187</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Mærket <em>praksis</em>: at "kendskab" regnes fra den faktiske fraflytning og ikke fra opsigelsen, følger af praksis og står ikke ordret i loven.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="pakken">
+        <h2>Hvad er i repoet</h2>
+        <p class="sec-intro">Det hele ligger klar i skabelonen, du får invitation til (Fase 1, trin 4–5). Når du klikker "Use this template", får du denne mappe som dit eget repo.</p>
+<pre class="tree">GUIDE.md                       denne vejledning som tekst
+README.md                      forsiden af repoet
+CLAUDE.md                      arbejdsbeskrivelsen til Claude
+.gitignore                     holder dokumenter og billeder ude af git
+.claude/skills/
+  kom-i-gang/SKILL.md          vejlederen: skriv "hjælp mig i gang"
+  lejer-mail/SKILL.md          sorter mail, lav svarudkast
+  fraflytning/SKILL.md         fra opsigelse til depositumopgørelse
+  ny-lejer/SKILL.md            annonce, kontrakt, indflytningssyn
+  betaling-og-paakrav/SKILL.md overvågning, påmindelse, påkrav
+lovgivning/
+  README.md                    sådan hentes og opdateres loven
+  lejeloven-noegleregler.md    frister og formkrav med paragraffer
+skabeloner/
+  lejemaal.md                  lejemålskortet
+  paakrav.md                   påkrav ved manglende husleje
+  venlig-betalingspaamindelse.md
+  indkaldelse-fraflytningssyn.md
+eksempel/                      opdigtet arkiv med tre lejemål at øve på</pre>
+        <p class="note"><strong>Et godt kvalitetstjek:</strong> lad din advokat eller brancheforening skimme påkravsskabelonen én gang. Så er den på plads for altid. Beløb som påkravsgebyret ændrer sig hvert år, og Claude opdaterer dem, når du beder den hente loven igen.</p>
+      </section>
+    </main>
+  </div>
+
+  <footer>Startpakke til en privat udlejningsadministration med Claude · november 2026</footer>
+</div>
+
+<script>
+(function () {
+  var KEY = 'udlejning-startpakke-checks';
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('ul.checks input[type=checkbox]'));
+  var progress = document.getElementById('progress');
+  function update() {
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    progress.textContent = '(' + done + ' af ' + boxes.length + ' trin klaret)';
+  }
+  boxes.forEach(function (b) {
+    if (state[b.id]) b.checked = true;
+    b.addEventListener('change', function () {
+      state[b.id] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+      update();
+    });
+  });
+  update();
+
+  document.querySelectorAll('button.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var q = btn.parentNode.querySelector('q').cloneNode(true);
+      var ctx = q.querySelector('.ctx'); if (ctx) ctx.remove();
+      var text = q.textContent.trim();
+      function ok() { btn.textContent = 'Kopieret'; setTimeout(function () { btn.textContent = 'Kopiér'; }, 1600); }
+      function fallback() {
+        var r = document.createRange(); r.selectNodeContents(btn.parentNode.querySelector('q'));
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Markeret';
+        setTimeout(function () { btn.textContent = 'Kopiér'; }, 1600);
+      }
+      try {
+        navigator.clipboard.writeText(text).then(ok, fallback);
+      } catch (e) { fallback(); }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
